@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>С Днём Рождения! 🎁</title>
+    <meta name="language" content="zh-CN">
+
+    <base href="/">
+    <link rel="icon" href="image/logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="image/logo.png">
+
+    <script src="/config.js"></script>
+
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- ═══════════════════════════════════════════════════════
+         ШАГ 1: Загружаем данные с сервера (SQLite) по ID из хэша.
+         Используем синхронный XHR чтобы данные были готовы
+         до того как сработает DOMContentLoaded в settings.js.
+    ═══════════════════════════════════════════════════════ -->
+    <script>
+    (function(){
+        // Читаем ID из пути: /SabiwkaHappy_85599 → SabiwkaHappy_85599
+        var id = window.location.pathname.replace(/^\//, '').split('?')[0];
+        // Fallback на хэш для локальной разработки через file:// или Live Server
+        if (!id) id = window.location.hash.slice(1);
+        if (!id) { window.__viewNotFound = true; return; }
+
+        var apiBase = window.APP_API_URL || (location.protocol + '//' + location.hostname + ':3000');
+        var d;
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', apiBase + '/page/' + id, false); // синхронный
+            xhr.send();
+            if (xhr.status === 404) { window.__viewNotFound = true; return; }
+            if (xhr.status === 410) { window.__viewExpired  = true; return; }
+            if (xhr.status !== 200) { window.__viewNotFound = true; return; }
+            d = JSON.parse(xhr.responseText);
+        } catch(e) { window.__viewNotFound = true; return; }
+
+        /* ── Строим массив страниц (должно быть НЕЧЁТНОЕ число) ── */
+        function buildPages(photos, text){
+            if (!photos || photos.length === 0) return [];
+            var pgs = photos.map(function(src, i){
+                var obj = { image: src };
+                if (i === photos.length - 1 && text)
+                    obj.content = text.substring(0, 200);
+                return obj;
+            });
+            // Нечётное правило книги
+            if (pgs.length > 1 && pgs.length % 2 === 0)
+                pgs.push({ image: '/image/theend.jpg', content: '💕' });
+            return pgs;
+        }
+
+        /* ── Sequence: каждое слово через | ─────────────────────── */
+        function buildSequence(name, text){
+            var parts = [];
+            // Имя: берём не более 2 слов
+            (name||'').trim().split(/\s+/).slice(0,2).forEach(function(w){ if(w) parts.push(w); });
+            parts.push('С ДНЁМ', 'РОЖДЕНИЯ', '❤');
+            return parts.join('|');
+        }
+
+        var photos  = d.photos || [];
+        var pages   = buildPages(photos, d.text);
+        var hasBook = pages.length > 0;
+
+        window.__viewCustomSettings = {
+            music:        '/music/hbdmusic1.mp3',
+            countdown:    3,
+            matrixText:   'HAPPYBIRTHDAY',
+            matrixColor1: '#ff69b4',
+            matrixColor2: '#ff1493',
+            sequence:     buildSequence(d.name, d.text),
+            sequenceColor:'#ff69b4',
+            gift:         hasBook ? '/image/happy3.gif' : '',
+            enableBook:   hasBook,
+            enableHeart:  true,
+            isSave:       false,
+            colorTheme:   'pink',
+            pages:        pages
+        };
+
+        document.title = 'С Днём Рождения, ' + (d.name||'') + '! 🎁';
+    })();
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+
+<body>
+
+    <!-- ── Оверлей "Не найдено" ───────────────────────────────── -->
+    <div id="view-not-found" style="
+        display:none; position:fixed; inset:0; z-index:999999;
+        background:#000; flex-direction:column;
+        justify-content:center; align-items:center; gap:20px;
+        font-family:'Dancing Script',cursive; text-align:center; padding:24px;">
+        <div style="font-size:clamp(28px,6vw,42px);color:#ff69b4;
+            text-shadow:0 0 25px rgba(255,105,180,.9);">
+            😔 Страница не найдена
+        </div>
+        <div style="color:rgba(255,182,193,.6);font-size:15px;
+            font-family:Arial,sans-serif;max-width:320px;line-height:1.6;">
+            Возможно, ссылка устарела или страница<br>
+            была открыта в другом браузере.
+        </div>
+    </div>
+
+    <!-- ── Оверлей "Истёк срок" (30 дней) ───────────────────── -->
+    <div id="view-expired" style="
+        display:none; position:fixed; inset:0; z-index:999999;
+        background:#000; flex-direction:column;
+        justify-content:center; align-items:center; gap:20px;
+        font-family:'Dancing Script',cursive; text-align:center; padding:24px;">
+        <div style="font-size:clamp(28px,6vw,42px);color:#ff69b4;
+            text-shadow:0 0 25px rgba(255,105,180,.9);">
+            ⏳ Срок страницы истёк
+        </div>
+        <div style="color:rgba(255,182,193,.6);font-size:15px;
+            font-family:Arial,sans-serif;max-width:340px;line-height:1.6;">
+            Страница хранится <b style="color:#ff69b4;">30 дней</b>.<br>
+            Этот срок истёк. Создай новую!
+        </div>
+        <a href="create.html" style="
+            color:#ff69b4; text-decoration:none;
+            border:1px solid rgba(255,105,180,.5);
+            border-radius:12px; padding:12px 30px;
+            font-size:16px; transition:background .2s;">
+            Создать новую страницу →
+        </a>
+    </div>
+
+    <!-- ── Точная копия HTML из index.html ───────────────────── -->
+
+    <button id="langSwitchBtn" style="display:none;top:20px;right:150px;
+        z-index:10000004;padding:8px 16px;border-radius:8px;
+        background:#fff;color:#222;border:1px solid #dadce0;cursor:pointer;">EN/VI</button>
+
+    <div id="googleAuthContainer" style="display:none;position:fixed;
+        top:20px;left:20px;z-index:10003;"></div>
+
+    <canvas id="matrix-rain" style="display:none;"></canvas>
+    <canvas style="position:absolute;width:100%;height:100%;z-index:9999;display:none;" class="canvas"></canvas>
+
+    <div class="overlay">
+        <div class="stars-container" id="starsContainer"></div>
+        <img id="gift-image" src="image/happy3.gif"
+            style="display:none;position:absolute;top:50%;left:50%;
+            transform:translate(-50%,-50%);z-index:10000;
+            max-width:80%;max-height:80%;" />
+        <div class="content-display" id="contentDisplay">
+            <p id="contentText"></p>
+        </div>
+        <div class="firework-container" id="fireworkContainer"></div>
+        <div class="book-container">
+            <div class="book" id="book"></div>
+        </div>
+
+        <button class="music-control" id="musicControl" title="Play/Pause Music">▶</button>
+
+        <!-- Кнопка настроек скрыта для режима просмотра -->
+        <button class="settings-button" id="settingsButton"
+            title="Settings" style="display:none;">⚙</button>
+
+        <div id="settingsHint" class="settings-hint">
+            <div class="hint-text" data-i18n="settingsHint" style="display:none;"></div>
+        </div>
+
+        <!-- Settings modal — обязателен для работы settings.js,
+             но скрыт от пользователя при просмотре -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚙️ Cài Đặt Trang Web</h2>
+                    <span class="close">×</span>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>🎵 Âm Thanh</h3>
+                        <div class="form-group">
+                            <label>Nhạc Nền:</label>
+                            <div class="music-select-row">
+                                <select id="backgroundMusic"></select>
+                                <button type="button" id="musicPreviewButton" class="music-preview-btn">▶ Nghe thử</button>
+                            </div>
+                            <span id="musicPreviewStatus"></span>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>⏰ Thời Gian</h3>
+                        <div class="form-group">
+                            <label>Đếm Ngược:</label>
+                            <select id="countdownTime">
+                                <option value="3">3 giây</option>
+                                <option value="5">5 giây</option>
+                                <option value="10">10 giây</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>🌧️ Mưa Chữ</h3>
+                        <div class="form-group">
+                            <label>Chữ:</label>
+                            <input type="text" id="matrixText" value="HAPPYBIRTHDAY">
+                        </div>
+                        <div class="color-theme-buttons">
+                            <button type="button" class="color-theme-btn active" data-theme="pink">
+                                <div class="color-preview pink-preview"></div><span>Hồng</span></button>
+                            <button type="button" class="color-theme-btn" data-theme="blue">
+                                <div class="color-preview blue-preview"></div><span>Xanh</span></button>
+                            <button type="button" class="color-theme-btn" data-theme="purple">
+                                <div class="color-preview purple-preview"></div><span>Tím</span></button>
+                            <button type="button" class="color-theme-btn" data-theme="custom">
+                                <div class="color-preview custom-preview"></div><span>Tùy</span></button>
+                        </div>
+                        <div class="form-row" id="customColorSection" style="display:none;">
+                            <div class="form-group">
+                                <label>Màu 1:</label>
+                                <input type="color" id="matrixColor1" value="#ff69b4">
+                            </div>
+                            <div class="form-group">
+                                <label>Màu 2:</label>
+                                <input type="color" id="matrixColor2" value="#ff1493">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>✨ Chữ chính</h3>
+                        <div class="form-group">
+                            <label>Nội Dung:</label>
+                            <input type="text" id="sequenceText" value="HAPPY|BIRTHDAY">
+                        </div>
+                        <div class="form-group" id="sequenceColorSection" style="display:none;">
+                            <label>Màu:</label>
+                            <input type="color" id="sequenceColor" value="#ff69b4">
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>🎁 Hình Động</h3>
+                        <div class="form-group">
+                            <label>GIF:</label>
+                            <select id="giftImage"><option value="">Không có</option></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Hiển thị sách:</label>
+                        <select id="enableBook">
+                            <option value="true">Bật</option>
+                            <option value="false">Tắt</option>
+                        </select>
+                    </div>
+                    <div class="settings-section" id="bookSettingsSection">
+                        <h3>📖 Trang Sách</h3>
+                        <div id="pageConfigs"></div>
+                        <div class="form-group">
+                            <label>Hiệu ứng trái tim:</label>
+                            <select id="enableHeart">
+                                <option value="true">Bật</option>
+                                <option value="false">Tắt</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Lưu QR vĩnh viễn:</label>
+                        <input type="checkbox" id="isSave">
+                    </div>
+                    <div class="settings-p" style="margin-bottom:12px;background:#fff8e1;
+                        color:#b26a00;border-radius:7px;padding:10px 14px;">
+                        <div>⏳ Hạn: <b id="expireDate">30 ngày</b></div>
+                    </div>
+                    <button id="applySettings" class="apply-settings-btn">🎉 Áp Dụng</button>
+                </div>
+            </div>
+        </div>
+
+        <audio id="birthdayAudio" loop>
+            <source src="music/hbdmusic1.mp3" type="audio/mpeg">
+        </audio>
+
+        <div id="orientation-lock">
+            <div class="phone-icon"><img src="image/screen.png" alt=""></div>
+        </div>
+
+        <div id="paymentModal" style="display:none;position:fixed;top:0;left:0;
+            width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:99999;">
+            <div style="position:relative;margin:5% auto;width:90%;max-width:800px;
+                background:white;padding:20px;border-radius:10px;">
+                <button onclick="document.getElementById('paymentModal').style.display='none'"
+                    style="position:absolute;top:10px;right:10px;">✖</button>
+                <iframe id="paymentIframe" style="width:100%;height:600px;border:none;"></iframe>
+            </div>
+        </div>
+
+        <button id="fullscreenBtn" style="display:none;position:fixed;bottom:20px;
+            right:20px;z-index:990010;padding:10px 18px;border-radius:8px;
+            border:none;background:#222;color:#fff;">
+            <img style="width:20px;height:20px;vertical-align:middle;"
+                src="image/full.png" alt="">
+        </button>
+
+
+        <!-- ── Скрипты (те же что в index.html, без obf-файлов) ── -->
+        <script src="lang.js"></script>
+        <script src="jscp/settings.js"></script>
+
+        <!-- ═══════════════════════════════════════════════════════
+             ШАГ 2: После загрузки settings.js переопределяем
+             initializeDefaultSettings(), чтобы она использовала
+             наши кастомные данные вместо дефолтных.
+             DOMContentLoaded ещё не сработал — мы успеваем!
+        ═══════════════════════════════════════════════════════ -->
+        <script>
+        if (window.__viewCustomSettings) {
+            // Подменяем функцию — теперь она ставит наши данные
+            initializeDefaultSettings = function() {
+                window.settings = window.__viewCustomSettings;
+            };
+        }
+        </script>
+
+        <script src="jscp/main.js"></script>
+        <script src="jscp/ui.js"></script>
+
+        <!-- ── ШАГ 3: Показать нужный оверлей ──────────────── -->
+        <script>
+        (function(){
+            if (window.__viewNotFound) {
+                var el = document.getElementById('view-not-found');
+                if (el) el.style.display = 'flex';
+            }
+            if (window.__viewExpired) {
+                var el = document.getElementById('view-expired');
+                if (el) el.style.display = 'flex';
+            }
+        })();
+        </script>
+
+    </div>
+</body>
+</html>

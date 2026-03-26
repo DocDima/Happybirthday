@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Создать поздравление 🎁</title>
+    <link rel="icon" href="image/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+        width: 100%; height: 100%;
+        background: #000;
+        font-family: 'Arial', sans-serif;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    /* ─── MATRIX CANVAS ─── */
+    #matrix-rain {
+        position: fixed; top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 1; pointer-events: none;
+    }
+
+    /* ─── STARS ─── */
+    .star {
+        position: fixed; border-radius: 50%;
+        background: #fff; pointer-events: none; z-index: 2;
+        animation: twinkle var(--dur, 3s) var(--del, 0s) ease-in-out infinite;
+    }
+    @keyframes twinkle {
+        0%,100% { opacity: 0.1; transform: scale(1); }
+        50%      { opacity: 0.7; transform: scale(1.4); }
+    }
+
+    /* ─── WRAP ─── */
+    #wrap {
+        position: relative; z-index: 10;
+        min-height: 100vh;
+        display: flex; justify-content: center; align-items: flex-start;
+        padding: 40px 16px 60px;
+    }
+
+    /* ─── CARD ─── */
+    .card {
+        width: 100%; max-width: 560px;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255,105,180,0.45);
+        border-radius: 24px;
+        padding: 42px 44px 46px;
+        box-shadow:
+            0 0 0 1px rgba(255,105,180,0.1),
+            0 0 60px rgba(255,105,180,0.2),
+            0 30px 80px rgba(0,0,0,0.65);
+        margin-top: 30px;
+        animation: cardIn .6s cubic-bezier(.19,1,.22,1) both;
+    }
+    @keyframes cardIn {
+        from { opacity:0; transform: translateY(30px) scale(.97); }
+        to   { opacity:1; transform: translateY(0)    scale(1);   }
+    }
+
+    /* ─── TITLE ─── */
+    .card-title {
+        text-align: center;
+        font-family: 'Dancing Script', cursive;
+        font-size: clamp(26px, 6vw, 36px);
+        color: #ff69b4;
+        text-shadow: 0 0 30px rgba(255,105,180,.9), 0 0 60px rgba(255,105,180,.4);
+        margin-bottom: 6px;
+        letter-spacing: 1px;
+    }
+    .card-sub {
+        text-align: center;
+        font-size: 12px; letter-spacing: 3px;
+        color: rgba(255,182,193,.4);
+        text-transform: uppercase;
+        margin-bottom: 32px;
+    }
+
+    /* ─── FORM ─── */
+    .f-group { margin-bottom: 22px; }
+
+    .f-group label {
+        display: block; margin-bottom: 8px;
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 2px; text-transform: uppercase;
+        color: rgba(255,182,193,.7);
+    }
+
+    .f-input, .f-textarea {
+        width: 100%;
+        padding: 13px 18px;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,105,180,.3);
+        border-radius: 12px;
+        color: #fff; font-size: 15px;
+        font-family: 'Dancing Script', cursive;
+        letter-spacing: .5px;
+        outline: none;
+        transition: border-color .3s, box-shadow .3s, background .3s;
+    }
+    .f-input::placeholder, .f-textarea::placeholder {
+        color: rgba(255,182,193,.25); font-family: Arial, sans-serif; font-size: 14px;
+    }
+    .f-input:focus, .f-textarea:focus {
+        border-color: #ff69b4;
+        background: rgba(255,105,180,.06);
+        box-shadow: 0 0 20px rgba(255,105,180,.3);
+    }
+    .f-input.err { border-color: #ff4466 !important; box-shadow: 0 0 14px rgba(255,68,102,.35) !important; }
+
+    .f-textarea {
+        resize: vertical; min-height: 120px; line-height: 1.7;
+        font-family: 'Dancing Script', cursive;
+    }
+
+    /* ─── PHOTO GRID ─── */
+    .photos-head {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 10px;
+    }
+    .photos-head label {
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 2px; text-transform: uppercase;
+        color: rgba(255,182,193,.7);
+    }
+    .photos-count {
+        font-size: 12px; color: rgba(255,182,193,.4);
+        transition: color .3s;
+    }
+    .photos-count.full { color: #ff69b4; }
+
+    .photos-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+    }
+
+    .p-slot {
+        aspect-ratio: 1;
+        border: 2px dashed rgba(255,105,180,.3);
+        border-radius: 12px; overflow: hidden;
+        position: relative; cursor: pointer;
+        background: rgba(255,255,255,.02);
+        transition: border-color .3s, transform .25s, box-shadow .3s;
+    }
+    .p-slot:hover { border-color: #ff69b4; transform: scale(1.05); box-shadow: 0 0 18px rgba(255,105,180,.35); }
+    .p-slot.filled { border-style: solid; border-color: rgba(255,105,180,.55); }
+
+    .p-slot input[type=file] {
+        position: absolute; inset: 0; opacity: 0;
+        cursor: pointer; width: 100%; height: 100%; z-index: 3;
+    }
+    .p-slot.filled input[type=file] { display: none; }
+
+    .p-icon {
+        position: absolute; inset: 0; pointer-events: none;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        color: rgba(255,105,180,.4); font-size: 20px;
+        transition: opacity .2s;
+    }
+    .p-icon span { font-size: 9px; margin-top: 5px; color: rgba(255,105,180,.3); letter-spacing: 1px; }
+
+    .p-img {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover; display: none;
+    }
+
+    .p-del {
+        position: absolute; top: 4px; right: 4px;
+        width: 20px; height: 20px;
+        background: rgba(255,20,147,.85); border: none;
+        border-radius: 50%; color: #fff;
+        font-size: 10px; cursor: pointer;
+        display: none; align-items: center; justify-content: center;
+        z-index: 4; line-height: 1;
+        transition: transform .2s, background .2s;
+    }
+    .p-del:hover { background: #ff1493; transform: scale(1.2); }
+
+    /* ─── DIVIDER ─── */
+    .divider {
+        height: 1px; margin: 26px 0;
+        background: linear-gradient(90deg, transparent, rgba(255,105,180,.25), transparent);
+    }
+
+    /* ─── CREATE BTN ─── */
+    .btn-create {
+        width: 100%; padding: 18px;
+        background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+        border: none; border-radius: 14px;
+        color: #fff; font-size: 16px; font-weight: 700;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        letter-spacing: 2px; text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 6px 28px rgba(255,20,147,.45);
+        transition: transform .25s, box-shadow .25s;
+        position: relative; overflow: hidden;
+    }
+    .btn-create::after {
+        content: ''; position: absolute; inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,.18), transparent);
+        opacity: 0; transition: opacity .2s;
+    }
+    .btn-create:hover { transform: translateY(-3px); box-shadow: 0 12px 38px rgba(255,20,147,.6); }
+    .btn-create:hover::after { opacity: 1; }
+    .btn-create:active { transform: translateY(0); }
+
+    /* ─── SUCCESS MODAL ─── */
+    /* ─── PAYMENT MODAL ─── */
+    #pay-modal {
+        display: none; position: fixed; inset: 0; z-index: 10001;
+        background: rgba(0,0,0,.92);
+        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        justify-content: center; align-items: center; padding: 20px;
+    }
+    #pay-modal.on { display: flex; }
+
+    .pay-box {
+        background: rgba(5,0,15,.97);
+        border: 1px solid rgba(255,105,180,.5);
+        border-radius: 24px; padding: 44px 38px;
+        text-align: center; max-width: 460px; width: 100%;
+        box-shadow: 0 0 80px rgba(255,105,180,.3), 0 40px 100px rgba(0,0,0,.7);
+        animation: popIn .4s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+
+    .pay-stars-icon {
+        font-size: 64px; margin-bottom: 10px;
+        animation: starSpin 4s linear infinite;
+    }
+    @keyframes starSpin {
+        0%,100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 8px gold); }
+        50%      { transform: scale(1.12) rotate(10deg); filter: drop-shadow(0 0 18px gold); }
+    }
+
+    .pay-title {
+        font-family: 'Dancing Script', cursive;
+        font-size: 28px; color: #ffd700;
+        text-shadow: 0 0 20px rgba(255,215,0,.7);
+        margin-bottom: 6px;
+    }
+    .pay-sub { color: rgba(255,224,100,.5); font-size: 13px; margin-bottom: 26px; }
+
+    .pay-price-box {
+        background: rgba(255,215,0,.06);
+        border: 1px solid rgba(255,215,0,.3);
+        border-radius: 16px; padding: 18px;
+        margin-bottom: 22px;
+    }
+    .pay-price {
+        font-size: 42px; font-weight: 900;
+        color: #ffd700; line-height: 1;
+        text-shadow: 0 0 20px rgba(255,215,0,.6);
+    }
+    .pay-price-label {
+        font-size: 13px; color: rgba(255,224,100,.5);
+        margin-top: 4px; letter-spacing: 1px;
+    }
+    .pay-includes {
+        text-align: left; margin-bottom: 24px;
+    }
+    .pay-includes li {
+        list-style: none; color: rgba(255,255,255,.7);
+        font-size: 14px; padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .pay-includes li::before { content: '✓ '; color: #ffd700; }
+
+    .pay-btn-stars {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+        border: none; border-radius: 14px;
+        color: #000; font-size: 17px; font-weight: 800;
+        cursor: pointer; letter-spacing: 0.5px;
+        box-shadow: 0 6px 28px rgba(255,215,0,.4);
+        transition: transform .2s, box-shadow .2s;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .pay-btn-stars:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 38px rgba(255,215,0,.6);
+    }
+
+    .pay-btn-back {
+        background: transparent; border: none;
+        color: rgba(255,182,193,.35); font-size: 13px;
+        cursor: pointer; margin-top: 16px;
+        text-decoration: underline; transition: color .2s;
+    }
+    .pay-btn-back:hover { color: #ffb6c1; }
+
+    .pay-status {
+        margin-top: 18px; padding: 12px 16px;
+        border-radius: 10px; font-size: 14px;
+        display: none;
+    }
+    .pay-status.waiting {
+        display: block;
+        background: rgba(255,215,0,.08);
+        border: 1px solid rgba(255,215,0,.25);
+        color: rgba(255,224,100,.8);
+    }
+    .pay-status.success {
+        display: block;
+        background: rgba(0,200,100,.1);
+        border: 1px solid rgba(0,200,100,.3);
+        color: rgba(100,255,150,.9);
+    }
+
+    /* ─── SUCCESS MODAL ─── */
+    #modal {
+        display: none; position: fixed; inset: 0; z-index: 10000;
+        background: rgba(0,0,0,.9);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        justify-content: center; align-items: center; padding: 20px;
+    }
+    #modal.on { display: flex; }
+
+    .modal-box {
+        background: rgba(5,0,12,.97);
+        border: 1px solid rgba(255,105,180,.5);
+        border-radius: 24px; padding: 50px 42px;
+        text-align: center; max-width: 500px; width: 100%;
+        box-shadow: 0 0 80px rgba(255,105,180,.35), 0 40px 100px rgba(0,0,0,.7);
+        animation: popIn .4s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+    @keyframes popIn {
+        from { transform: scale(.8); opacity:0; }
+        to   { transform: scale(1); opacity:1; }
+    }
+
+    .modal-emoji { font-size: 72px; margin-bottom: 16px; animation: bounce 1s ease infinite; }
+    @keyframes bounce {
+        0%,100% { transform: translateY(0); }
+        50%      { transform: translateY(-10px); }
+    }
+
+    .modal-title {
+        font-family: 'Dancing Script', cursive;
+        font-size: 32px; color: #ff69b4;
+        text-shadow: 0 0 25px rgba(255,105,180,.9);
+        margin-bottom: 8px;
+    }
+    .modal-sub {
+        color: rgba(255,182,193,.5); font-size: 13px; margin-bottom: 26px;
+    }
+
+    .link-box {
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,105,180,.35);
+        border-radius: 12px; padding: 14px 18px;
+        color: #ffb6c1; font-size: 13px;
+        word-break: break-all; text-align: left;
+        line-height: 1.6; margin-bottom: 22px;
+        user-select: all; cursor: text;
+    }
+
+    .modal-btns { display: flex; gap: 12px; justify-content: center; }
+
+    .btn-copy {
+        background: linear-gradient(135deg,#ff69b4,#ff1493);
+        border: none; border-radius: 12px;
+        color: #fff; padding: 13px 28px;
+        font-size: 15px; font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 18px rgba(255,20,147,.4);
+        transition: transform .2s, box-shadow .2s;
+    }
+    .btn-copy:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,20,147,.55); }
+
+    .btn-open {
+        background: transparent;
+        border: 1px solid rgba(255,105,180,.5);
+        border-radius: 12px; color: #ff69b4;
+        padding: 13px 28px; font-size: 15px;
+        cursor: pointer;
+        transition: transform .2s, background .2s;
+    }
+    .btn-open:hover { background: rgba(255,105,180,.1); transform: translateY(-2px); }
+
+    .btn-new {
+        background: transparent; border: none;
+        color: rgba(255,182,193,.4); font-size: 13px;
+        cursor: pointer; margin-top: 20px;
+        text-decoration: underline; transition: color .2s;
+    }
+    .btn-new:hover { color: #ffb6c1; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 520px) {
+        .card { padding: 28px 18px 34px; }
+        .photos-grid { grid-template-columns: repeat(3,1fr); gap: 8px; }
+    }
+    </style>
+    <script src="/config.js"></script>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+
+    <div id="wrap">
+        <div class="card">
+            <div class="card-title">🎁 Создать поздравление</div>
+            <div class="card-sub">• заполни форму и получи ссылку •</div>
+
+            <div class="f-group">
+                <label>Имя получателя</label>
+                <input class="f-input" id="inp-name" type="text" placeholder="Например: Наташа" maxlength="30" autocomplete="off">
+            </div>
+
+            <div class="f-group">
+                <label>Текст поздравления</label>
+                <textarea class="f-textarea" id="inp-text" placeholder="Напиши тёплые слова..."></textarea>
+            </div>
+
+            <div class="f-group">
+                <div class="photos-head">
+                    <label>Фотографии</label>
+                    <span class="photos-count" id="cnt">0 / 5</span>
+                </div>
+                <div class="photos-grid" id="grid"></div>
+            </div>
+
+            <div class="divider"></div>
+            <button class="btn-create" id="btn-create">Создать страницу</button>
+        </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
+    <div id="pay-modal">
+        <div class="pay-box">
+            <div class="pay-stars-icon">⭐</div>
+            <div class="pay-title">Оплата через Telegram Stars</div>
+            <div class="pay-sub">Быстро и безопасно</div>
+
+            <ul class="pay-includes">
+                <li>Уникальная ссылка на страницу</li>
+                <li>До 5 фотографий</li>
+                <li>Матричный фон + анимация</li>
+                <li>Хранение 30 дней</li>
+                <li>Открытка с переворотом</li>
+            </ul>
+
+            <!-- Кнопка Stars -->
+            <button class="pay-btn-stars" id="pay-btn-app">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.58-.46.72-.93.45l-2.57-1.9-1.24 1.19c-.14.13-.26.25-.52.25l.18-2.6 4.72-4.26c.2-.18-.05-.28-.32-.1L7.9 14.66l-2.49-.78c-.54-.17-.55-.54.12-.79l9.73-3.75c.44-.17.83.1.38.66z" fill="#2AABEE"/>
+                </svg>
+                ⭐ Оплатить Telegram Stars (<span id="pay-stars-amount">1</span> Star)
+            </button>
+
+            <div class="pay-status" id="pay-status"></div>
+            <button class="pay-btn-back" id="pay-btn-back">← Вернуться к форме</button>
+        </div>
+    </div>
+
+    <!-- SUCCESS MODAL -->
+    <div id="modal">
+        <div class="modal-box">
+            <div class="modal-emoji">🎉</div>
+            <div class="modal-title">Страница готова!</div>
+            <div class="modal-sub">Отправь ссылку получателю 💕</div>
+            <div class="link-box" id="link-box"></div>
+            <div class="modal-btns">
+                <button class="btn-copy" id="btn-copy">📋 Копировать</button>
+                <button class="btn-open" id="btn-open">Открыть →</button>
+            </div>
+            <button class="btn-new" id="btn-new">+ Создать ещё одну</button>
+        </div>
+    </div>
+
+    <script>
+    // ══════════════════════════════════════════════
+    //  MATRIX RAIN  (точная копия оригинала)
+    // ══════════════════════════════════════════════
+    (function(){
+        const cv = document.getElementById('matrix-rain');
+        const cx = cv.getContext('2d');
+        const CH = "HAPPYBIRTHDAY".split("");
+        const C1 = '#ff69b4', C2 = '#ff1493', FS = 25;
+        let tid;
+        function run(){
+            cv.width = window.innerWidth; cv.height = window.innerHeight;
+            const cols = Math.floor(cv.width/FS);
+            const mxR  = Math.floor(cv.height/FS)+2;
+            const dr   = new Array(cols).fill(0);
+            const col  = Array.from({length:cols},(_,i)=>i%2===0?C1:C2);
+            const dl   = Array.from({length:cols},()=>Math.random()*2000);
+            const on   = new Array(cols).fill(false);
+            const t0   = Date.now();
+            if(tid) clearInterval(tid);
+            tid = setInterval(()=>{
+                cx.fillStyle="rgba(0,0,0,0.05)";
+                cx.fillRect(0,0,cv.width,cv.height);
+                cx.font=`bold ${FS}px Menlo,Consolas,'Courier New',monospace`;
+                const now=Date.now();
+                for(let i=0;i<cols;i++){
+                    if(!on[i]&&now-t0>=dl[i]) on[i]=true;
+                    if(on[i]&&dr[i]<mxR){
+                        const c=CH[Math.floor(Math.random()*CH.length)];
+                        cx.fillStyle=col[i]; cx.shadowColor=col[i]; cx.shadowBlur=8;
+                        cx.fillText(c,i*FS,dr[i]*FS); cx.shadowBlur=0;
+                    }
+                    if(on[i]) dr[i]++;
+                    if(dr[i]>=mxR){dr[i]=0;dl[i]=Math.random()*1000;on[i]=false;}
+                }
+            },50);
+        }
+        run();
+        window.addEventListener('resize',()=>{clearTimeout(window.__mr);window.__mr=setTimeout(run,120);});
+    })();
+
+    // ══════════════════════════════════════════════
+    //  STARS
+    // ══════════════════════════════════════════════
+    (function(){
+        for(let i=0;i<60;i++){
+            const s=document.createElement('div');
+            s.className='star';
+            const sz=Math.random()*2+1;
+            s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--del:${Math.random()*5}s;opacity:.1`;
+            document.body.appendChild(s);
+        }
+    })();
+
+    // ══════════════════════════════════════════════
+    //  СЖАТИЕ ФОТО (авто-уменьшение через Canvas)
+    // ══════════════════════════════════════════════
+    function compressImage(file, maxSide, quality){
+        return new Promise(resolve=>{
+            const rd=new FileReader();
+            rd.onload=e=>{
+                const src=e.target.result;
+                const img=new Image();
+                img.onload=()=>{
+                    let w=img.width, h=img.height;
+                    // Уменьшаем пропорционально, если больше maxSide
+                    if(w>maxSide||h>maxSide){
+                        if(w>=h){ h=Math.round(h*maxSide/w); w=maxSide; }
+                        else     { w=Math.round(w*maxSide/h); h=maxSide; }
+                    }
+                    const cv=document.createElement('canvas');
+                    cv.width=w; cv.height=h;
+                    cv.getContext('2d').drawImage(img,0,0,w,h);
+                    resolve(cv.toDataURL('image/jpeg', quality));
+                };
+                img.src=src;
+            };
+            rd.readAsDataURL(file);
+        });
+    }
+
+    // ══════════════════════════════════════════════
+    //  PHOTO SLOTS
+    // ══════════════════════════════════════════════
+    const MAX = 5;
+    const data = new Array(MAX).fill(null);
+    const grid = document.getElementById('grid');
+    const cnt  = document.getElementById('cnt');
+
+    function updCnt(){
+        const n=data.filter(Boolean).length;
+        cnt.textContent=`${n} / ${MAX}`;
+        cnt.classList.toggle('full', n===MAX);
+    }
+
+    for(let i=0;i<MAX;i++){
+        const slot=document.createElement('div');
+        slot.className='p-slot'; slot.id=`s${i}`;
+        slot.innerHTML=`
+            <input type="file" accept="image/*" id="f${i}">
+            <div class="p-icon">📷<span>ФОТО ${i+1}</span></div>
+            <img class="p-img" id="p${i}" alt="">
+            <button class="p-del" id="d${i}" title="Удалить">✕</button>`;
+        grid.appendChild(slot);
+
+        document.getElementById(`f${i}`).addEventListener('change',function(){
+            const file=this.files[0]; if(!file)return;
+            // Сжимаем: макс 900px по длинной стороне, качество JPEG 0.78
+            compressImage(file, 900, 0.78).then(compressed=>{
+                data[i]=compressed;
+                const img=document.getElementById(`p${i}`);
+                img.src=compressed; img.style.display='block';
+                slot.querySelector('.p-icon').style.display='none';
+                document.getElementById(`d${i}`).style.display='flex';
+                slot.classList.add('filled');
+                updCnt();
+            });
+        });
+
+        document.getElementById(`d${i}`).addEventListener('click',e=>{
+            e.stopPropagation();
+            data[i]=null;
+            const img=document.getElementById(`p${i}`);
+            img.src=''; img.style.display='none';
+            slot.querySelector('.p-icon').style.display='flex';
+            document.getElementById(`d${i}`).style.display='none';
+            slot.classList.remove('filled');
+            document.getElementById(`f${i}`).value='';
+            updCnt();
+        });
+    }
+
+    // ══════════════════════════════════════════════
+    //  GENERATE ID
+    // ══════════════════════════════════════════════
+    function makeId(name){
+        const cl=name.replace(/\s+/g,'').replace(/[^a-zA-ZА-Яа-яёЁ0-9]/g,'').substring(0,14)||'User';
+        return `${cl}Happy_${Math.floor(10000+Math.random()*90000)}`;
+    }
+
+    // ══════════════════════════════════════════════
+    //  CREATE
+    // ══════════════════════════════════════════════
+    const nameInp = document.getElementById('inp-name');
+    nameInp.addEventListener('input',()=>nameInp.classList.remove('err'));
+
+    // ══════════════════════════════════════════════
+    //  НАСТРОЙКИ TELEGRAM STARS
+    // ══════════════════════════════════════════════
+    const BOT_API_URL = window.APP_API_URL || `${location.protocol}//${location.hostname}:3000`;
+    const PAYMENT_ENABLED = true;                    // оплата включена
+
+    // Загружаем имя бота с сервера
+    let TG_BOT_USERNAME = '';
+    let STARS_PRICE     = 1;
+    fetch(`${BOT_API_URL}/bot-info`)
+        .then(r => r.json())
+        .then(info => {
+            TG_BOT_USERNAME = info.username;
+            STARS_PRICE     = info.starsPrice || 1;
+            const el = document.getElementById('pay-stars-amount');
+            if (el) el.textContent = STARS_PRICE;
+        })
+        .catch(() => {
+            // Сервер недоступен — показываем предупреждение в консоли
+            console.warn('⚠️ Bot сервер недоступен на', BOT_API_URL);
+        });
+
+    // ── Сохранение страницы на сервер (SQLite) ───────────────
+    async function compressAll(photos, maxSide, quality) {
+        return Promise.all(photos.map(src => new Promise(res => {
+            const img = new Image();
+            img.onload = () => {
+                const cv = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > maxSide || h > maxSide) {
+                    if (w >= h) { h = Math.round(h * maxSide / w); w = maxSide; }
+                    else        { w = Math.round(w * maxSide / h); h = maxSide; }
+                }
+                cv.width = w; cv.height = h;
+                cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                res(cv.toDataURL('image/jpeg', quality));
+            };
+            img.src = src;
+        })));
+    }
+
+    async function savePage(name, text, photos) {
+        const id = makeId(name);
+
+        const postToServer = async (photoList) => {
+            const r = await fetch(`${BOT_API_URL}/save-page`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ id, name, text, photos: photoList })
+            });
+            if (!r.ok) throw new Error('server');
+            return id;
+        };
+
+        try {
+            return await postToServer(photos);
+        } catch(e) {
+            // Слишком большие фото — пережимаем и пробуем снова
+            try {
+                const recomp = await compressAll(photos, 600, 0.55);
+                return await postToServer(recomp);
+            } catch(e2) {
+                throw new Error('storage');
+            }
+        }
+    }
+
+    // ── Показ ссылки после создания ──────────────────────────
+    function showSuccess(url) {
+        document.getElementById('link-box').textContent = url;
+        document.getElementById('modal').classList.add('on');
+
+        document.getElementById('btn-copy').onclick=()=>{
+            const btn=document.getElementById('btn-copy');
+            (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+            .catch(()=>{ const t=document.createElement('textarea');t.value=url;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t); })
+            .finally(()=>{ btn.textContent='✅ Скопировано!'; setTimeout(()=>{btn.textContent='📋 Копировать';},2500); });
+        };
+        document.getElementById('btn-open').onclick=()=>window.open(url,'_blank');
+        document.getElementById('btn-new').onclick=()=>{
+            document.getElementById('modal').classList.remove('on');
+            nameInp.value=''; document.getElementById('inp-text').value='';
+            for(let i=0;i<MAX;i++){
+                data[i]=null;
+                const img=document.getElementById(`p${i}`);
+                if(img){img.src='';img.style.display='none';}
+                const ic=document.getElementById(`s${i}`)?.querySelector('.p-icon');
+                const del=document.getElementById(`d${i}`);
+                const fi=document.getElementById(`f${i}`);
+                if(ic)  ic.style.display='flex';
+                if(del) del.style.display='none';
+                if(fi)  fi.value='';
+                document.getElementById(`s${i}`)?.classList.remove('filled');
+            }
+            updCnt();
+        };
+    }
+
+    // ── Кнопка СОЗДАТЬ ───────────────────────────────────────
+    document.getElementById('btn-create').addEventListener('click', async ()=>{
+        const name   = nameInp.value.trim();
+        const text   = document.getElementById('inp-text').value.trim();
+        const photos = data.filter(Boolean);
+
+        if(!name){ nameInp.classList.add('err'); nameInp.focus(); return; }
+
+        // Если оплата включена — показываем модал Stars
+        if (PAYMENT_ENABLED) {
+            // Сохраняем черновик во временное хранилище
+            window.__pendingPage = { name, text, photos };
+            document.getElementById('pay-modal').classList.add('on');
+            return;
+        }
+
+        // Оплата выключена — создаём сразу (режим разработки)
+        try {
+            const id  = await savePage(name, text, photos);
+            const base = window.location.href.replace(/\/(create(\.html)?)?$/, '');
+            showSuccess(`${base}/${id}`);
+        } catch(e) {
+            alert('Не удалось сохранить — попробуй уменьшить количество или размер фотографий.');
+        }
+    });
+
+    // ── Кнопки оплаты ────────────────────────────────────────
+    let activePayInterval = null; // чтоб не дублировать интервалы
+
+    async function startPayment(openUrl, statusMsg) {
+        const pending = window.__pendingPage;
+        if (!pending) return;
+
+        // Если имя бота не загрузилось — пробуем снова прямо сейчас
+        if (!TG_BOT_USERNAME) {
+            try {
+                const r    = await fetch(`${BOT_API_URL}/bot-info`);
+                const info = await r.json();
+                TG_BOT_USERNAME = info.username;
+                STARS_PRICE     = info.starsPrice || 1;
+            } catch(e) {}
+        }
+
+        if (!TG_BOT_USERNAME) {
+            alert('Не удалось подключиться к серверу бота.\n\nПроверь:\n• Запущен ли bot/start.bat?\n• Открыта ли страница через http://127.0.0.1:5500 (не file://)');
+            return;
+        }
+
+        // Генерируем временный payload для отслеживания платежа
+        const tempId  = makeId(pending.name);
+        const payload = btoa(JSON.stringify({ id: tempId, name: pending.name }))
+                            .replace(/[^a-zA-Z0-9]/g,'').substring(0,32);
+
+        const statusEl = document.getElementById('pay-status');
+        statusEl.className = 'pay-status waiting';
+        statusEl.innerHTML = statusMsg + '<br><small>После оплаты вернитесь на эту страницу</small>';
+
+        // Открываем ссылку
+        window.open(openUrl(payload), '_blank');
+
+        // Останавливаем предыдущий интервал если был
+        if (activePayInterval) clearInterval(activePayInterval);
+
+        // Ждём подтверждения оплаты (polling каждые 3 сек, 2 минуты)
+        let attempts      = 0;
+        const maxAttempts = 40; // 40 × 3сек = 2 минуты
+        activePayInterval = setInterval(async () => {
+            attempts++;
+            let paid = false;
+            try {
+                const r = await fetch(`${BOT_API_URL}/check-payment/${payload}`);
+                const data = await r.json();
+                paid = data.paid;
+            } catch(e) {
+                // Сервер временно недоступен — продолжаем ждать
+            }
+
+            if (paid) {
+                clearInterval(activePayInterval);
+                statusEl.className   = 'pay-status success';
+                statusEl.textContent = '✅ Оплата получена! Создаём страницу...';
+                setTimeout(async () => {
+                    try {
+                        const id   = await savePage(pending.name, pending.text, pending.photos);
+                        const base = window.location.href.replace(/\/create\.html.*$/, '').replace(/\/?$/, '');
+                        document.getElementById('pay-modal').classList.remove('on');
+                        showSuccess(`${base}/view.html#${id}`);
+                    } catch(e) {
+                        alert('Ошибка сохранения страницы. Попробуй ещё раз.');
+                    }
+                }, 1200);
+                return;
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(activePayInterval);
+                statusEl.style.cssText = 'display:block;background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.3);color:rgba(255,150,150,.8);border-radius:10px;padding:12px;margin-top:16px;font-size:14px;';
+                statusEl.textContent   = '⚠️ Оплата не подтверждена за 2 минуты. Попробуй снова.';
+            }
+        }, 3000);
+    }
+
+    // Кнопка Stars
+    document.getElementById('pay-btn-app').addEventListener('click', () => {
+        startPayment(
+            payload => `tg://resolve?domain=${TG_BOT_USERNAME}&start=pay_${payload}`,
+            '⏳ Открываю Telegram...'
+        );
+    });
+
+    // ── Кнопка "Назад" ────────────────────────────────────────
+    document.getElementById('pay-btn-back').addEventListener('click', ()=>{
+        document.getElementById('pay-modal').classList.remove('on');
+        document.getElementById('pay-status').className = 'pay-status';
+    });
+    </script>
+</body>
+</html>
