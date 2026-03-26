@@ -6,7 +6,7 @@
     // Получи бесплатный туннель: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
     // Команда: cloudflared tunnel --url http://localhost:3000
     // ─────────────────────────────────────────────────────────
-    var PRODUCTION_API = 'https://ЗАМЕНИ-НА-URL-СВОЕГО-СЕРВЕРА';
+    var PRODUCTION_API = 'https://cleaner-lenses-mayor-assessed.trycloudflare.com';
 
     window.APP_API_URL = isLocal
         ? location.protocol + '//' + location.hostname + ':3000'
