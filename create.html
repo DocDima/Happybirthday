@@ -846,8 +846,15 @@
                     try {
                         const id   = await savePage(pending.name, pending.text, pending.photos);
                         const base = window.location.href.replace(/\/(create(\.html)?)?$/, '');
+                        const pageUrl = `${base}/${id}`;
+                        // Уведомляем бот — он пришлёт пользователю прямую ссылку
+                        fetch(`${BOT_API_URL}/page-ready`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ payload, pageUrl })
+                        }).catch(() => {});
                         document.getElementById('pay-modal').classList.remove('on');
-                        showSuccess(`${base}/${id}`);
+                        showSuccess(pageUrl);
                     } catch(e) {
                         alert('Ошибка сохранения страницы. Попробуй ещё раз.');
                     }

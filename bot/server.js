@@ -28,7 +28,6 @@ setInterval(cleanupExpired, 24 * 60 * 60 * 1000);
 // ── Конфиг ───────────────────────────────────────────────────
 const TOKEN         = process.env.BOT_TOKEN;
 const PORT          = process.env.PORT || 3000;
-const FRONTEND_URL  = process.env.FRONTEND_URL || 'http://127.0.0.1:5500';
 let   STARS_PRICE    = parseInt(process.env.STARS_PRICE) || 1;
 const ADMIN_CHAT_ID  = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID) : null;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Dorabotkin2024!';
@@ -47,6 +46,7 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 
 const paidPayloads = new Map();
+const chatByPayload = new Map(); // payload → { chatId, savedAt } — живёт дольше для /page-ready
 
 // ── Helpers ───────────────────────────────────────────────────
 function esc(str) {
@@ -140,9 +140,13 @@ bot.on('successful_payment', async (msg) => {
     console.log(`✅ ОПЛАТА: chatId=${chatId}, ${payment.total_amount} Stars`);
 
     paidPayloads.set(payload, { chatId, paidAt: Date.now(), stars: payment.total_amount });
+    chatByPayload.set(payload, { chatId, savedAt: Date.now() });
 
     for (const [k, v] of paidPayloads.entries()) {
         if (Date.now() - v.paidAt > 10 * 60 * 1000) paidPayloads.delete(k);
+    }
+    for (const [k, v] of chatByPayload.entries()) {
+        if (Date.now() - v.savedAt > 15 * 60 * 1000) chatByPayload.delete(k);
     }
 
     notifyAdmin(
@@ -155,15 +159,8 @@ bot.on('successful_payment', async (msg) => {
     );
 
     await bot.sendMessage(chatId,
-        '🎉 <b>Оплата получена!</b>\n\nСпасибо! Нажми кнопку ниже — страница создастся автоматически.',
-        {
-            parse_mode: 'HTML',
-            reply_markup: {
-                inline_keyboard: [[
-                    { text: '🎁 Вернуться на сайт', url: FRONTEND_URL + '/create.html' }
-                ]]
-            }
-        }
+        '🎉 <b>Оплата получена!</b>\n\nСпасибо! Страница создаётся — через секунду пришлю тебе готовую ссылку.',
+        { parse_mode: 'HTML' }
     );
 });
 
@@ -258,6 +255,35 @@ app.get('/check-payment/:payload', (req, res) => {
     } else {
         res.json({ paid: false });
     }
+});
+
+// POST /page-ready — фронтенд сообщает готовый URL, бот шлёт ссылку пользователю
+app.post('/page-ready', async (req, res) => {
+    const { payload, pageUrl } = req.body;
+    if (!payload || !pageUrl) return res.status(400).json({ error: 'Missing fields' });
+
+    const record = chatByPayload.get(payload);
+    if (!record) return res.json({ ok: true }); // уже истёк или не найден — ничего не делаем
+
+    chatByPayload.delete(payload);
+
+    try {
+        await bot.sendMessage(record.chatId,
+            '🎁 <b>Твоя страница готова!</b>\n\nОтправь эту ссылку тому, кого поздравляешь:',
+            {
+                parse_mode: 'HTML',
+                reply_markup: {
+                    inline_keyboard: [[
+                        { text: '🔗 Открыть страницу', url: pageUrl }
+                    ]]
+                }
+            }
+        );
+    } catch(e) {
+        console.error('❌ /page-ready sendMessage:', e.message);
+    }
+
+    res.json({ ok: true });
 });
 
 app.get('/health', (_req, res) => {
