@@ -273,21 +273,47 @@
     }
     .pay-includes li::before { content: '✓ '; color: #ffd700; }
 
-    .pay-btn-stars {
+    /* ── Обёртка с пульсирующим овалом ── */
+    .pay-btn-wrap {
+        position: relative;
+        display: block;
         width: 100%;
-        padding: 16px;
-        background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-        border: none; border-radius: 14px;
-        color: #000; font-size: 17px; font-weight: 800;
-        cursor: pointer; letter-spacing: 0.5px;
-        box-shadow: 0 6px 28px rgba(255,215,0,.4);
+        margin: 10px 0 4px;
+    }
+    .pay-btn-ring {
+        position: absolute;
+        inset: -7px -5px;
+        border-radius: 60px;
+        border: 2px solid rgba(255, 215, 0, 0.75);
+        pointer-events: none;
+        animation: payPulse 2.1s ease-out infinite;
+    }
+    .pay-btn-ring:nth-child(2) { animation-delay: .7s; }
+    .pay-btn-ring:nth-child(3) { animation-delay: 1.4s; }
+    @keyframes payPulse {
+        0%   { transform: scale(1);    opacity: .9; }
+        100% { transform: scale(1.18); opacity: 0;  }
+    }
+
+    .pay-btn-stars {
+        position: relative; z-index: 1;
+        width: 100%;
+        padding: clamp(14px, 3.5vw, 18px) clamp(16px, 4vw, 28px);
+        background: linear-gradient(135deg, #ffe033 0%, #ffb300 55%, #ff8c00 100%);
+        border: none; border-radius: 50px;
+        color: #1a0800; font-size: clamp(14px, 3.8vw, 17px); font-weight: 900;
+        cursor: pointer; letter-spacing: 0.3px;
+        box-shadow: 0 6px 30px rgba(255,200,0,.55), 0 2px 8px rgba(0,0,0,.35);
         transition: transform .2s, box-shadow .2s;
-        display: flex; align-items: center; justify-content: center; gap: 10px;
+        display: flex; align-items: center; justify-content: center;
+        gap: clamp(6px, 2vw, 10px);
+        white-space: nowrap;
     }
     .pay-btn-stars:hover {
         transform: translateY(-3px);
-        box-shadow: 0 12px 38px rgba(255,215,0,.6);
+        box-shadow: 0 14px 42px rgba(255,200,0,.7);
     }
+    .pay-btn-stars:active { transform: translateY(0); }
 
     .pay-btn-back {
         background: transparent; border: none;
@@ -449,12 +475,17 @@
             </ul>
 
             <!-- Кнопка Stars -->
-            <button class="pay-btn-stars" id="pay-btn-app">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.58-.46.72-.93.45l-2.57-1.9-1.24 1.19c-.14.13-.26.25-.52.25l.18-2.6 4.72-4.26c.2-.18-.05-.28-.32-.1L7.9 14.66l-2.49-.78c-.54-.17-.55-.54.12-.79l9.73-3.75c.44-.17.83.1.38.66z" fill="#2AABEE"/>
-                </svg>
-                ⭐ Оплатить Telegram Stars (<span id="pay-stars-amount">1</span> Star)
-            </button>
+            <div class="pay-btn-wrap">
+                <span class="pay-btn-ring"></span>
+                <span class="pay-btn-ring"></span>
+                <span class="pay-btn-ring"></span>
+                <button class="pay-btn-stars" id="pay-btn-app">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.93c-.12.58-.46.72-.93.45l-2.57-1.9-1.24 1.19c-.14.13-.26.25-.52.25l.18-2.6 4.72-4.26c.2-.18-.05-.28-.32-.1L7.9 14.66l-2.49-.78c-.54-.17-.55-.54.12-.79l9.73-3.75c.44-.17.83.1.38.66z" fill="#2AABEE"/>
+                    </svg>
+                    ⭐ Оплатить Telegram Stars (<span id="pay-stars-amount">1</span> Star)
+                </button>
+            </div>
 
             <div class="pay-status" id="pay-status"></div>
             <button class="pay-btn-back" id="pay-btn-back">← Вернуться к форме</button>
