@@ -29,8 +29,11 @@ setInterval(cleanupExpired, 24 * 60 * 60 * 1000);
 const TOKEN         = process.env.BOT_TOKEN;
 const PORT          = process.env.PORT || 3000;
 const FRONTEND_URL  = process.env.FRONTEND_URL || 'http://127.0.0.1:5500';
-const STARS_PRICE   = parseInt(process.env.STARS_PRICE) || 1;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID) : null;
+let   STARS_PRICE    = parseInt(process.env.STARS_PRICE) || 1;
+const ADMIN_CHAT_ID  = process.env.ADMIN_CHAT_ID ? parseInt(process.env.ADMIN_CHAT_ID) : null;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Dorabotkin2024!';
+const crypto         = require('crypto');
+const adminTokens    = new Map(); // token → expiresAt
 
 if (!TOKEN) {
     console.error('❌ BOT_TOKEN не задан в .env файле!');
@@ -162,6 +165,50 @@ bot.on('successful_payment', async (msg) => {
             }
         }
     );
+});
+
+// ── Admin API ─────────────────────────────────────────────────
+
+app.post('/admin/login', (req, res) => {
+    if (req.body.password !== ADMIN_PASSWORD)
+        return res.status(401).json({ error: 'Неверный пароль' });
+    const token = crypto.randomBytes(32).toString('hex');
+    adminTokens.set(token, Date.now() + 24 * 60 * 60 * 1000);
+    res.json({ ok: true, token });
+});
+
+function checkAdmin(req, res) {
+    const token = req.body?.token || req.query?.token;
+    if (!token || !adminTokens.has(token) || adminTokens.get(token) < Date.now()) {
+        res.status(401).json({ error: 'Не авторизован' });
+        return false;
+    }
+    return true;
+}
+
+app.get('/admin/info', (req, res) => {
+    if (!checkAdmin(req, res)) return;
+    res.json({ starsPrice: STARS_PRICE });
+});
+
+app.post('/admin/set-price', (req, res) => {
+    if (!checkAdmin(req, res)) return;
+    const price = parseInt(req.body.stars);
+    if (!price || price < 1) return res.status(400).json({ error: 'Неверная цена' });
+
+    STARS_PRICE = price;
+
+    // Обновляем .env на диске
+    const envPath = path.join(__dirname, '.env');
+    try {
+        let env = fs.readFileSync(envPath, 'utf8');
+        env = env.replace(/^STARS_PRICE=.*/m, `STARS_PRICE=${price}`);
+        fs.writeFileSync(envPath, env);
+    } catch(e) { console.error('Ошибка записи .env:', e.message); }
+
+    console.log(`⭐ Цена Stars изменена на ${price}`);
+    notifyAdmin(`⚙️ <b>Цена изменена</b>\n\n⭐ Новая цена: <b>${price} Star</b>`);
+    res.json({ ok: true, starsPrice: STARS_PRICE });
 });
 
 // ── REST API ──────────────────────────────────────────────────
