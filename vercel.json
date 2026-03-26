@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/create", "destination": "/create.html" },
+    { "source": "/admin",  "destination": "/admin.html"  },
     { "source": "/:id([A-Za-z0-9]+Happy_[0-9]+)", "destination": "/view.html" }
   ]
 }
