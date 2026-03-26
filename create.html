@@ -461,6 +461,38 @@
         </div>
     </div>
 
+    <!-- POPUP: минимум фото -->
+    <div id="popup-photos" style="
+        display:none; position:fixed; inset:0; z-index:20000;
+        background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+        justify-content:center; align-items:center;">
+        <div style="
+            background:rgba(10,0,20,0.95);
+            border:1px solid rgba(255,105,180,0.4);
+            border-radius:18px; padding:36px 32px;
+            max-width:320px; width:90%; text-align:center;
+            box-shadow:0 0 50px rgba(255,20,147,0.2);">
+            <div style="font-size:42px; margin-bottom:14px;">📸</div>
+            <div style="
+                color:#ff69b4; font-size:18px; font-weight:700;
+                margin-bottom:10px;">Недостаточно фотографий</div>
+            <div style="
+                color:rgba(255,182,193,0.65); font-size:14px;
+                line-height:1.6; margin-bottom:24px;">
+                Пожалуйста, загрузите<br>минимум <b style="color:#ffd700;">3 фотографии</b>
+            </div>
+            <button id="popup-photos-ok" style="
+                padding:12px 40px;
+                background:linear-gradient(135deg,#ff69b4,#ff1493);
+                border:none; border-radius:10px;
+                color:#fff; font-size:15px; font-weight:700;
+                letter-spacing:1px; cursor:pointer;
+                box-shadow:0 4px 20px rgba(255,20,147,0.4);">
+                OK
+            </button>
+        </div>
+    </div>
+
     <!-- SUCCESS MODAL -->
     <div id="modal">
         <div class="modal-box">
@@ -727,6 +759,15 @@
         const photos = data.filter(Boolean);
 
         if(!name){ nameInp.classList.add('err'); nameInp.focus(); return; }
+
+        if(photos.length < 3){
+            const popup = document.getElementById('popup-photos');
+            popup.style.display = 'flex';
+            document.getElementById('popup-photos-ok').onclick = () => {
+                popup.style.display = 'none';
+            };
+            return;
+        }
 
         // Если оплата включена — показываем модал Stars
         if (PAYMENT_ENABLED) {
