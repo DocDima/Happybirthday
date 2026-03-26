@@ -804,9 +804,9 @@
                 setTimeout(async () => {
                     try {
                         const id   = await savePage(pending.name, pending.text, pending.photos);
-                        const base = window.location.href.replace(/\/create\.html.*$/, '').replace(/\/?$/, '');
+                        const base = window.location.href.replace(/\/(create(\.html)?)?$/, '');
                         document.getElementById('pay-modal').classList.remove('on');
-                        showSuccess(`${base}/view.html#${id}`);
+                        showSuccess(`${base}/${id}`);
                     } catch(e) {
                         alert('Ошибка сохранения страницы. Попробуй ещё раз.');
                     }
