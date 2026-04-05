@@ -9,6 +9,6 @@
         window.APP_API_URL = location.origin;
     } else {
         // Доступ через Vercel — нужен URL туннеля
-        window.APP_API_URL = 'https://cleaner-lenses-mayor-assessed.trycloudflare.com';
+        window.APP_API_URL = 'https://warren-est-motors-theoretical.trycloudflare.com';
     }
 })();
