@@ -142,6 +142,17 @@ bot.on('successful_payment', async (msg) => {
     paidPayloads.set(payload, { chatId, paidAt: Date.now(), stars: payment.total_amount });
     chatByPayload.set(payload, { chatId, savedAt: Date.now() });
 
+    // Автоматически помечаем страницу как оплаченную (если уже сохранена)
+    const pageFile = path.join(PAGES_DIR, `${payload}.json`);
+    if (fs.existsSync(pageFile)) {
+        try {
+            const pd = JSON.parse(fs.readFileSync(pageFile, 'utf8'));
+            pd.paid = true;
+            pd.paidAt = Date.now();
+            fs.writeFileSync(pageFile, JSON.stringify(pd));
+        } catch(e) {}
+    }
+
     for (const [k, v] of paidPayloads.entries()) {
         if (Date.now() - v.paidAt > 10 * 60 * 1000) paidPayloads.delete(k);
     }
@@ -188,6 +199,32 @@ app.get('/admin/info', (req, res) => {
     res.json({ starsPrice: STARS_PRICE });
 });
 
+// GET /admin/pages — список всех страниц
+app.get('/admin/pages', (req, res) => {
+    if (!checkAdmin(req, res)) return;
+    try {
+        const files = fs.readdirSync(PAGES_DIR).filter(f => f.endsWith('.json'));
+        const pages = files.map(f => {
+            try {
+                const d = JSON.parse(fs.readFileSync(path.join(PAGES_DIR, f), 'utf8'));
+                return {
+                    id: d.id,
+                    name: d.name || '—',
+                    paid: !!d.paid,
+                    paidAt: d.paidAt || null,
+                    createdAt: d.createdAt,
+                    photosCount: (d.photos || []).length
+                };
+            } catch(e) { return null; }
+        }).filter(Boolean);
+        // Сортировка: новые сверху
+        pages.sort((a, b) => b.createdAt - a.createdAt);
+        res.json({ pages });
+    } catch(e) {
+        res.status(500).json({ error: 'Failed to read pages' });
+    }
+});
+
 app.post('/admin/set-price', (req, res) => {
     if (!checkAdmin(req, res)) return;
     const price = parseInt(req.body.stars);
@@ -215,13 +252,30 @@ app.post('/save-page', (req, res) => {
     const { id, name, text, photos } = req.body;
     if (!id || !name) return res.status(400).json({ error: 'Missing fields' });
     try {
-        const data = { id, name, text: text || '', photos: photos || [], createdAt: Date.now() };
+        const data = { id, name, text: text || '', photos: photos || [], createdAt: Date.now(), paid: false };
         fs.writeFileSync(path.join(PAGES_DIR, `${id}.json`), JSON.stringify(data));
         console.log(`💾 Страница сохранена: ${id}`);
         res.json({ ok: true, id });
     } catch (err) {
         console.error('❌ Ошибка сохранения:', err.message);
         res.status(500).json({ error: 'Failed to save' });
+    }
+});
+
+// POST /page/:id/mark-paid — пометить страницу как оплаченную
+// Без токена — вызов от фронтенда после оплаты; с токеном — ручное подтверждение из админки
+app.post('/page/:id/mark-paid', (req, res) => {
+    const file = path.join(PAGES_DIR, `${req.params.id}.json`);
+    if (!fs.existsSync(file)) return res.status(404).json({ error: 'Not found' });
+    try {
+        const d = JSON.parse(fs.readFileSync(file, 'utf8'));
+        d.paid = true;
+        d.paidAt = Date.now();
+        fs.writeFileSync(file, JSON.stringify(d));
+        console.log(`✅ Страница оплачена: ${req.params.id}`);
+        res.json({ ok: true });
+    } catch(e) {
+        res.status(500).json({ error: 'Failed to update' });
     }
 });
 

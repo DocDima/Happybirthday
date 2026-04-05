@@ -892,6 +892,8 @@
                 setTimeout(async () => {
                     try {
                         const id   = await savePage(pending.name, pending.text, pending.photos);
+                        // Помечаем страницу как оплаченную
+                        fetch(`${BOT_API_URL}/page/${id}/mark-paid`, { method: 'POST' }).catch(() => {});
                         const base = window.location.href.replace(/\/(create(\.html)?)?$/, '');
                         const pageUrl = `${base}/${id}`;
                         // Уведомляем бот — он пришлёт пользователю прямую ссылку

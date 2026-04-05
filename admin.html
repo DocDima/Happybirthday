@@ -33,7 +33,7 @@
             border-radius: 20px;
             padding: 40px 36px;
             width: 100%;
-            max-width: 380px;
+            max-width: 520px;
             box-shadow: 0 0 60px rgba(255, 20, 147, 0.15);
             backdrop-filter: blur(12px);
         }
@@ -131,6 +131,147 @@
 
         #panel-login  { display: block; }
         #panel-admin  { display: none; }
+
+        /* ── Таблица страниц ── */
+        .pages-section {
+            margin-top: 28px;
+            border-top: 1px solid rgba(255, 105, 180, 0.15);
+            padding-top: 20px;
+        }
+
+        .pages-title {
+            color: #ff69b4;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            letter-spacing: 1px;
+        }
+
+        .pages-list {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .pages-list::-webkit-scrollbar { width: 4px; }
+        .pages-list::-webkit-scrollbar-track { background: transparent; }
+        .pages-list::-webkit-scrollbar-thumb { background: rgba(255,105,180,0.3); border-radius: 4px; }
+
+        .page-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 105, 180, 0.12);
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+
+        .page-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .page-name {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .page-meta {
+            color: rgba(255,182,193,0.45);
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+        .page-link {
+            color: #ff69b4;
+            text-decoration: none;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .page-link:hover { text-decoration: underline; }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .badge.paid {
+            background: rgba(50, 200, 100, 0.15);
+            border: 1px solid rgba(50, 200, 100, 0.3);
+            color: #7fdc9f;
+        }
+
+        .badge.pending {
+            background: rgba(255, 200, 50, 0.12);
+            border: 1px solid rgba(255, 200, 50, 0.3);
+            color: #ffd966;
+        }
+
+        .btn-confirm {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(50, 200, 100, 0.4);
+            background: rgba(50, 200, 100, 0.1);
+            color: #7fdc9f;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: background .2s;
+        }
+        .btn-confirm:hover { background: rgba(50, 200, 100, 0.25); }
+
+        .page-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .pages-empty {
+            color: rgba(255,182,193,0.35);
+            font-size: 13px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .pages-count {
+            color: rgba(255,182,193,0.4);
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: 1px solid rgba(255,105,180,0.25);
+            color: #ff69b4;
+            font-size: 12px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color .2s;
+        }
+        .refresh-btn:hover { border-color: rgba(255,105,180,0.6); }
+
+        .pages-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
     </style>
 </head>
 <body>
@@ -168,6 +309,18 @@
 
             <button class="btn" id="btn-save">Сохранить</button>
             <div class="msg" id="msg-admin"></div>
+
+            <!-- Список страниц -->
+            <div class="pages-section">
+                <div class="pages-header">
+                    <div class="pages-title">📋 Страницы</div>
+                    <button class="refresh-btn" id="btn-refresh">🔄 Обновить</button>
+                </div>
+                <div class="pages-count" id="pages-count"></div>
+                <div class="pages-list" id="pages-list">
+                    <div class="pages-empty">Загрузка...</div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -243,7 +396,7 @@
         if (e.key === 'Enter') document.getElementById('btn-login').click();
     });
 
-    // Загрузить текущую цену
+    // Загрузить текущую цену + страницы
     async function loadInfo() {
         try {
             const r = await fetch(`${API}/admin/info?token=${adminToken}`);
@@ -251,7 +404,80 @@
             document.getElementById('cur-price').textContent = d.starsPrice;
             document.getElementById('inp-stars').value = d.starsPrice;
         } catch(e) {}
+        loadPages();
     }
+
+    // Загрузить список страниц
+    async function loadPages() {
+        const list = document.getElementById('pages-list');
+        const count = document.getElementById('pages-count');
+        try {
+            const r = await fetch(`${API}/admin/pages?token=${adminToken}`);
+            const d = await r.json();
+            if (!r.ok) { list.innerHTML = '<div class="pages-empty">Ошибка загрузки</div>'; return; }
+
+            const pages = d.pages || [];
+            const paidCount = pages.filter(p => p.paid).length;
+            const pendingCount = pages.length - paidCount;
+            count.textContent = `Всего: ${pages.length} · Оплачено: ${paidCount} · Ожидание: ${pendingCount}`;
+
+            if (pages.length === 0) {
+                list.innerHTML = '<div class="pages-empty">Нет созданных страниц</div>';
+                return;
+            }
+
+            list.innerHTML = pages.map(p => {
+                const date = new Date(p.createdAt).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+                const badge = p.paid
+                    ? '<span class="badge paid">✅ Оплачено</span>'
+                    : '<span class="badge pending">⏳ Ожидание</span>';
+                const confirmBtn = p.paid
+                    ? ''
+                    : `<button class="btn-confirm" onclick="confirmPaid('${esc(p.id)}')">✅ Подтвердить</button>`;
+                const pageUrl = `/${p.id}`;
+                return `<div class="page-row" id="row-${esc(p.id)}">
+                    <div class="page-info">
+                        <div class="page-name">${esc(p.name)}</div>
+                        <div class="page-meta">📷 ${p.photosCount} фото · ${date}</div>
+                        <a class="page-link" href="${pageUrl}" target="_blank">${p.id}</a>
+                    </div>
+                    <div class="page-status">
+                        ${badge}
+                        ${confirmBtn}
+                    </div>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            list.innerHTML = '<div class="pages-empty">❌ Сервер недоступен</div>';
+        }
+    }
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', loadPages);
+
+    // Ручное подтверждение оплаты
+    window.confirmPaid = async function(pageId) {
+        if (!confirm(`Подтвердить оплату для "${pageId}"?`)) return;
+        try {
+            const r = await fetch(`${API}/page/${pageId}/mark-paid`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: adminToken })
+            });
+            if (r.ok) {
+                loadPages();
+            } else {
+                alert('Ошибка при подтверждении');
+            }
+        } catch(e) {
+            alert('Сервер недоступен');
+        }
+    };
 
     // Сохранить цену
     document.getElementById('btn-save').addEventListener('click', async () => {
