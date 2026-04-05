@@ -320,6 +320,35 @@
     vertical-align: middle;
 " src="image/full.png" alt="">
         </button>
+        <!-- Кнопка "Создать поздравление" -->
+        <a href="/create" id="createBtn" style="
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 990010;
+            padding: 14px 32px;
+            border-radius: 50px;
+            border: none;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+            color: #fff;
+            font-family: 'Dancing Script', cursive;
+            font-size: 20px;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 4px 20px rgba(255, 20, 147, 0.5);
+            cursor: pointer;
+            animation: createBtnPulse 2s ease-in-out infinite;
+            white-space: nowrap;
+        ">🎁 Создайте своё поздравление!</a>
+
+        <style>
+            @keyframes createBtnPulse {
+                0%, 100% { box-shadow: 0 4px 20px rgba(255, 20, 147, 0.5); }
+                50% { box-shadow: 0 4px 30px rgba(255, 20, 147, 0.8); }
+            }
+        </style>
+
         <script src="jscp/detect-devtools.js"></script>
         <script type='text/javascript'>
             // Bypass for developers
