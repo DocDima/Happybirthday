@@ -861,6 +861,14 @@
         const payload = btoa(JSON.stringify({ id: tempId, name: pending.name }))
                             .replace(/[^a-zA-Z0-9]/g,'').substring(0,32);
 
+        // Сохраняем страницу сразу (со статусом pending) — чтобы админ видел её в списке
+        try {
+            await savePage(pending.name, pending.text, pending.photos);
+        } catch(e) {
+            alert('Не удалось сохранить страницу. Попробуй уменьшить фото.');
+            return;
+        }
+
         const statusEl = document.getElementById('pay-status');
         statusEl.className = 'pay-status waiting';
         statusEl.innerHTML = statusMsg + '<br><small>После оплаты вернитесь на эту страницу</small>';
@@ -891,7 +899,7 @@
                 statusEl.textContent = '✅ Оплата получена! Создаём страницу...';
                 setTimeout(async () => {
                     try {
-                        const id   = await savePage(pending.name, pending.text, pending.photos);
+                        const id = tempId;
                         // Помечаем страницу как оплаченную
                         fetch(`${BOT_API_URL}/page/${id}/mark-paid`, { method: 'POST' }).catch(() => {});
                         const base = window.location.href.replace(/\/(create(\.html)?)?$/, '');
