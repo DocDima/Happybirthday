@@ -212,6 +212,20 @@
     .btn-create:hover::after { opacity: 1; }
     .btn-create:active { transform: translateY(0); }
 
+    .btn-demo {
+        flex: 1; padding: 16px 0; border-radius: 16px;
+        border: 2px solid rgba(255,105,180,.5);
+        background: transparent;
+        color: #ff69b4; font-size: 15px; font-weight: 700;
+        letter-spacing: 2px; text-transform: uppercase;
+        cursor: pointer;
+        transition: transform .25s, background .25s;
+    }
+    .btn-demo:hover { background: rgba(255,105,180,.1); transform: translateY(-3px); }
+    .btn-demo:active { transform: translateY(0); }
+
+    .btn-create { flex: 1; }
+
     /* ─── SUCCESS MODAL ─── */
     /* ─── PAYMENT MODAL ─── */
     #pay-modal {
@@ -468,7 +482,10 @@
             </div>
 
             <div class="divider"></div>
-            <button class="btn-create" id="btn-create">Создать страницу</button>
+            <div style="display:flex; gap:12px;">
+                <button class="btn-demo" id="btn-demo">👁 Демо</button>
+                <button class="btn-create" id="btn-create">⭐ Создать</button>
+            </div>
         </div>
     </div>
 
@@ -799,13 +816,13 @@
         };
     }
 
-    // ── Кнопка СОЗДАТЬ ───────────────────────────────────────
-    document.getElementById('btn-create').addEventListener('click', async ()=>{
+    // ── Валидация формы ─────────────────────────────────────
+    function validateForm() {
         const name   = nameInp.value.trim();
         const text   = document.getElementById('inp-text').value.trim();
         const photos = data.filter(Boolean);
 
-        if(!name){ nameInp.classList.add('err'); nameInp.focus(); return; }
+        if(!name){ nameInp.classList.add('err'); nameInp.focus(); return null; }
 
         if(photos.length < 3){
             const popup = document.getElementById('popup-photos');
@@ -813,8 +830,33 @@
             document.getElementById('popup-photos-ok').onclick = () => {
                 popup.style.display = 'none';
             };
+            return null;
+        }
+        return { name, text, photos };
+    }
+
+    // ── Кнопка ДЕМО ─────────────────────────────────────────
+    document.getElementById('btn-demo').addEventListener('click', async ()=>{
+        const form = validateForm();
+        if (!form) return;
+
+        let savedId;
+        try {
+            savedId = await savePage(form.name, form.text, form.photos);
+        } catch(e) {
+            alert('Не удалось сохранить — попробуй уменьшить количество или размер фотографий.');
             return;
         }
+
+        const base = window.location.href.replace(/\/(create(\.html)?)?$/, '');
+        window.open(`${base}/${savedId}?demo=1`, '_blank');
+    });
+
+    // ── Кнопка СОЗДАТЬ ───────────────────────────────────────
+    document.getElementById('btn-create').addEventListener('click', async ()=>{
+        const form = validateForm();
+        if (!form) return;
+        const { name, text, photos } = form;
 
         // Сохраняем страницу сразу
         let savedId;
