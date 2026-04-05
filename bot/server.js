@@ -323,7 +323,9 @@ app.post('/page-ready', async (req, res) => {
 
     try {
         await bot.sendMessage(record.chatId,
-            '🎁 <b>Твоя страница готова!</b>\n\nОтправь эту ссылку тому, кого поздравляешь:',
+            `🎁 <b>Твоя страница готова!</b>\n\n` +
+            `Отправь эту ссылку тому, кого поздравляешь:\n\n` +
+            `🔗 <code>${esc(pageUrl)}</code>`,
             {
                 parse_mode: 'HTML',
                 reply_markup: {
