@@ -344,6 +344,21 @@ app.get('/health', (_req, res) => {
     res.json({ ok: true, bot: botUsername, uptime: process.uptime() });
 });
 
+// ── Раздаём фронтенд из корня проекта ───────────────────────
+const FRONTEND_DIR = path.join(__dirname, '..');
+
+// Rewrites (как в vercel.json)
+app.get('/create', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'create.html')));
+app.get('/admin',  (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'admin.html')));
+
+// Статические файлы (css, js, images, music)
+app.use(express.static(FRONTEND_DIR));
+
+// /:id — view page (должен быть последним, чтобы не перехватывать другие роуты)
+app.get('/:id([A-Za-z0-9]+Happy_[0-9]+)', (_req, res) => {
+    res.sendFile(path.join(FRONTEND_DIR, 'view.html'));
+});
+
 app.listen(PORT, () => console.log(`\n🚀 Сервер на порту ${PORT}\n`));
 
 bot.on('polling_error', (err) => console.error('⚠️ polling:', err.message));
