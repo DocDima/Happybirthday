@@ -356,13 +356,59 @@
                 wm.innerHTML = grid;
                 document.body.appendChild(wm);
 
-                // Кнопка оплаты
-                var payBtn = document.createElement('a');
-                var pageId = window.location.pathname.replace(/^\//, '').split('?')[0];
-                payBtn.href = '/create?pay=' + pageId;
-                payBtn.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;padding:16px 36px;border-radius:50px;background:linear-gradient(135deg,#ff69b4,#ff1493);color:#fff;font-family:"Dancing Script",cursive;font-size:20px;font-weight:700;text-decoration:none;box-shadow:0 4px 24px rgba(255,20,147,0.6);animation:demoPulse 2s ease-in-out infinite;white-space:nowrap;';
+                // Кнопка оплаты → открывает бота для Stars
+                var payBtn = document.createElement('button');
+                payBtn.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;padding:16px 36px;border-radius:50px;border:none;background:linear-gradient(135deg,#ff69b4,#ff1493);color:#fff;font-family:"Dancing Script",cursive;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 24px rgba(255,20,147,0.6);animation:demoPulse 2s ease-in-out infinite;white-space:nowrap;';
                 payBtn.textContent = '⭐ Оплатить и убрать водяные знаки';
                 document.body.appendChild(payBtn);
+
+                var pageId = window.location.pathname.replace(/^\//, '').split('?')[0];
+                var apiBase = window.APP_API_URL || (location.protocol + '//' + location.hostname + ':3000');
+
+                payBtn.addEventListener('click', function() {
+                    // Получаем имя бота
+                    fetch(apiBase + '/bot-info')
+                        .then(function(r) { return r.json(); })
+                        .then(function(info) {
+                            var payload = btoa(JSON.stringify({ id: pageId, name: pageId }))
+                                .replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+                            var tgUrl = 'tg://resolve?domain=' + info.username + '&start=pay_' + payload;
+                            window.open(tgUrl, '_blank');
+
+                            // Polling оплаты
+                            payBtn.textContent = '⏳ Ожидаю оплату...';
+                            var attempts = 0;
+                            var interval = setInterval(function() {
+                                attempts++;
+                                fetch(apiBase + '/check-payment/' + payload)
+                                    .then(function(r) { return r.json(); })
+                                    .then(function(data) {
+                                        if (data.paid) {
+                                            clearInterval(interval);
+                                            // Помечаем как оплаченную
+                                            fetch(apiBase + '/page/' + pageId + '/mark-paid', { method: 'POST' });
+                                            // Отправляем ссылку через бота
+                                            var cleanUrl = window.location.origin + '/' + pageId;
+                                            fetch(apiBase + '/page-ready', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ payload: payload, pageUrl: cleanUrl })
+                                            });
+                                            // Убираем водяные знаки и кнопку
+                                            document.getElementById('demo-watermark').remove();
+                                            payBtn.remove();
+                                        }
+                                    }).catch(function() {});
+                                if (attempts >= 40) {
+                                    clearInterval(interval);
+                                    payBtn.textContent = '⭐ Оплатить и убрать водяные знаки';
+                                }
+                            }, 3000);
+                        })
+                        .catch(function() {
+                            alert('Не удалось подключиться к серверу');
+                        });
+                });
 
                 var style = document.createElement('style');
                 style.textContent = '@keyframes demoPulse{0%,100%{box-shadow:0 4px 24px rgba(255,20,147,0.6)}50%{box-shadow:0 4px 36px rgba(255,20,147,0.9)}}';
